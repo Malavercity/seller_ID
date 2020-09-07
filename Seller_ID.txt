@@ -1,0 +1,76 @@
+#!/bin/bash
+
+## Inicio de la funcion Manual_Charge ##
+
+function Manual_Charge                                    
+	{
+SellerID=1
+	 while [ $SellerID != 0 ]                        ##Creacion de Bucle, con la condicion logica
+	  do
+		read -p "Ingresar Seller_ID o 0 para finalizar y ejecutar: " SellerID 	##Mensaje para ingresar Seller_ID
+		  if [ $SellerID != 0 ]
+			then
+			echo $SellerID >> /tmp/listado_sellerid.txt	 	     	## Muestra SellerID ingresado y lo guarda en el txt
+		   fi
+		done								     	## Fin del Bucle
+	{
+
+## Fin de la funcion Manual_Charge ##
+
+## Inicio de la funcion Get_Info_Api ##
+
+function Get_Info_Api 							
+	{
+echo -e "/nCargando, espere..."						## Mensaje de carga
+ input="/tmp/listado_sellerid.txt"					## Carga los ID en la variable input
+    while IFS= read -r line						## Nuevo Bucle por ID
+	do
+
+ 	    curl  -s  https://api.mercadolibre.com/sites/MLA/search?seller_id=$line | jq -c '.results[] | .category_id' >> /tmp/dummy.txt
+
+## Obtener nombre de categoria usando Category_ID del archivo dummy.txt ##
+
+	for registro in 'cat /tmp/dummy.txt'
+	  do
+	    curl -x https://api.mercadolibre.com/categories/$registro | jq -c '.name" >> /tmp/categorias.txt 
+	   done
+
+## Obtener ID, Tittle y CategoryID del Item usando el Seller_ID ##
+
+	curl -s https://api.mercadolibre.com/sites/MLA/search?seller_id=$line | jq -c '.results[] | {id,title,category_id}' >> /tmp/data.txt
+
+mv /tmp/data.txt /tmp/Resultado_$line.txt  ## Modifica el nombre de data.txt por resultado_SellerID.txt
+
+		done < "$input"            ##  Fin While
+
+	echo -e "\nFin del script. Los resultados estan disponibles en /tmp/Resultados_"sellerID".txt"
+
+	}
+
+## Fin de la funcion Get_info_Api ##
+
+	 echo -e  "\nSeleccione una opcion: \n  1- Carga manual de uno o mas SellerID  \n  2- Tomar SellerID del arhivo 'listado_sellerid.txt' \n  3- Exit" 
+ read Option
+
+
+## Ejecucion de Script ##
+
+  case $Option in 
+ 
+      1)
+         Manual_Charge
+         Get_Info_Api
+         ;; 
+
+      2)
+         Get_Info_Api
+         ;; 
+
+      3)
+	 echo -e "\nGood Bye."
+	 exit
+         ;;
+
+  esac
+
+## Fin de Ejecucion ##
